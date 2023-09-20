@@ -270,6 +270,11 @@ server {
       location / {
         proxy_pass http://127.0.0.1:21114/;
 }
+    location /downloads/ {
+        alias /var/www/html/downloads/;
+        # Optional: Enable directory listings (autoindex) if needed
+        # autoindex on;
+    }
 }
 EOF
 )"
