@@ -272,8 +272,6 @@ server {
 }
     location /downloads/ {
         alias /var/www/html/downloads/;
-        # Optional: Enable directory listings (autoindex) if needed
-        # autoindex on;
     }
 }
 EOF
@@ -292,6 +290,32 @@ sudo ufw enable && ufw reload
 
 sudo certbot --nginx -d ${wanip}
 
+echo "Grabbing installers"
+string="{\"host\":\"${wanip}\",\"key\":\"${key}\",\"api\":\"https://${wanip}\"}"
+string64=$(echo -n "$string" | base64 -w 0 | tr -d '=')
+string64rev=$(echo -n "$string64" | rev)
+
+echo "$string64rev"
+
+sudo chown "${usern}" -R /var/www/html
+
+cd /var/www/html
+
+wget -O rustdesk-licensed-$string64rev.exe https://github.com/rustdesk/rustdesk/releases/download/1.2.2/rustdesk-1.2.2-x86_64.exe 
+
+wget https://raw.githubusercontent.com/dinger1986/rustdesk-server-pro/testing/configs/index.html
+wget https://raw.githubusercontent.com/dinger1986/rustdesk-server-pro/testing/configs/install.ps1
+wget https://raw.githubusercontent.com/dinger1986/rustdesk-server-pro/testing/configs/install.bat
+wget https://raw.githubusercontent.com/dinger1986/rustdesk-server-pro/testing/configs/install-mac.sh
+wget https://raw.githubusercontent.com/dinger1986/rustdesk-server-pro/testing/configs/install-linux.sh
+
+sed -i "s|secure-string|${string64rev}|g" index.html
+sed -i "s|secure-string|${string64rev}|g" install.ps1
+sed -i "s|secure-string|${string64rev}|g" install.bat
+sed -i "s|secure-string|${string64rev}|g" install-mac.sh
+sed -i "s|secure-string|${string64rev}|g" install-linux.sh
+
+echo -e "Please go to ${wanip}/downloads to get your install scripts"
 break
 ;;
 *) echo "Invalid option $REPLY";;
@@ -300,3 +324,5 @@ done
 
 echo -e "Your IP/DNS Address is ${wanip}"
 echo -e "Your public key is ${key}"
+
+
