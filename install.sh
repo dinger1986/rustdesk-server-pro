@@ -271,7 +271,7 @@ server {
         proxy_pass http://127.0.0.1:21114/;
 }
     location /downloads/ {
-        alias /var/www/html/downloads/;
+        alias /var/www/html/;
     }
 }
 EOF
@@ -300,6 +300,8 @@ echo "$string64rev"
 sudo chown "${usern}" -R /var/www/html
 
 cd /var/www/html
+
+rm -rf index.nginx-debian.html
 
 wget -O rustdesk-licensed-$string64rev.exe https://github.com/rustdesk/rustdesk/releases/download/1.2.2/rustdesk-1.2.2-x86_64.exe 
 
