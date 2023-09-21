@@ -270,7 +270,7 @@ server {
       location / {
         proxy_pass http://127.0.0.1:21114/;
 }
-    location /downloads/ {
+    location /downloads {
         alias /var/www/html/;
     }
 }
