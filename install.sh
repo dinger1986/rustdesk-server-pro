@@ -317,6 +317,9 @@ sed -i "s|secure-string|${string64rev}|g" install.bat
 sed -i "s|secure-string|${string64rev}|g" install-mac.sh
 sed -i "s|secure-string|${string64rev}|g" install-linux.sh
 
+apt install qrencode -y
+qrencode -o qrcode.png config=${string64rev}
+
 echo -e "Please go to ${wanip}/downloads to get your install scripts"
 break
 ;;
