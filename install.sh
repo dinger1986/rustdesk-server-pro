@@ -2,6 +2,8 @@
 
 # Get username
 usern=$(whoami)
+ARCH=$(uname -m)
+domain_name=$(hostname).rustdesk.pro
 
 PREREQ="curl wget unzip tar"
 PREREQDEB="dnsutils"
