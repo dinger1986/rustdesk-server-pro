@@ -112,24 +112,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable rustdesk-hbbr.service
 sudo systemctl start rustdesk-hbbr.service
 
-while ! [[ $CHECK_RUSTDESK_READY ]]; do
-  CHECK_RUSTDESK_READY=$(sudo systemctl status rustdesk-hbbr.service | grep "Active: active (running)")
-  echo -ne "RustDesk Relay not ready yet...${NC}\n"
-  sleep 3
-done
-
-echo "Tidying up install"
-if [ "${ARCH}" = "x86_64" ] ; then
-rm rustdesk-server-linux-amd64.zip
-rm -rf amd64
-elif [ "${ARCH}" = "armv7l" ] ; then
-rm rustdesk-server-linux-armv7.zip
-rm -rf armv7
-elif [ "${ARCH}" = "aarch64" ] ; then
-rm rustdesk-server-linux-arm64v8.zip
-rm -rf arm64v8
-fi
-
 rustdesknginx="$(
   cat <<EOF
 server {
