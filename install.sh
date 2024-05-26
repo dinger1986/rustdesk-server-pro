@@ -132,7 +132,7 @@ fi
 rustdesknginx="$(
   cat <<EOF
 server {
-  server_name {domain_name};
+  server_name ${domain_name};
       location / {
            proxy_set_header        X-Real-IP       \$remote_addr;
            proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -148,5 +148,5 @@ sudo rm /etc/nginx/sites-enabled/default
 
 sudo ln -s /etc/nginx/sites-available/rustdesk.conf /etc/nginx/sites-enabled/rustdesk.conf
 
-sudo certbot --nginx --non-interactive --agree-tos --email your-email@example.com -d {domain_name}
+sudo certbot --nginx --non-interactive --agree-tos --email your-email@example.com -d ${domain_name}
 
