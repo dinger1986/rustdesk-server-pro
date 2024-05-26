@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# This script will do the following to install RustDesk Server Pro
-# 1. Install some dependencies
-# 2. Setup UFW firewall if available
-# 3. Create 2 folders /var/lib/rustdesk-server and /var/log/rustdesk-server
-# 4. Download and extract RustDesk Pro Services to the above folder
-# 5. Create systemd services for hbbs and hbbr
-# 6. If you choose Domain, it will install Nginx and Certbot, allowing the API to be available on port 443 (https) and get an SSL certificate over port 80, it is automatically renewed
-
 # Get username
 usern=$(whoami)
 
@@ -23,7 +15,7 @@ if [ ! -d "/var/lib/rustdesk-server" ]; then
 fi
 
 sudo chown "${usern}" -R /var/lib/rustdesk-server
-cd /var/lib/rustdesk-server/ || exit 1
+cd /var/lib/rustdesk-server/
 
 
 # Download latest version of RustDesk
@@ -122,9 +114,6 @@ while ! [[ $CHECK_RUSTDESK_READY ]]; do
   echo -ne "RustDesk Relay not ready yet...${NC}\n"
   sleep 3
 done
-
-pubname=$(find /var/lib/rustdesk-server/ -name "*.pub")
-key=$(cat "${pubname}")
 
 echo "Tidying up install"
 if [ "${ARCH}" = "x86_64" ] ; then
