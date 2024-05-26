@@ -10,93 +10,11 @@
 
 # Get username
 usern=$(whoami)
-admintoken=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c16)
 
-ARCH=$(uname -m)
-
-
-# Identify OS
-if [ -f /etc/os-release ]; then
-    # freedesktop.org and systemd
-    . /etc/os-release
-    OS=$NAME
-    VER=$VERSION_ID
-    UPSTREAM_ID=${ID_LIKE,,}
-
-    # Fallback to ID_LIKE if ID was not 'ubuntu' or 'debian'
-    if [ "${UPSTREAM_ID}" != "debian" ] && [ "${UPSTREAM_ID}" != "ubuntu" ]; then
-        UPSTREAM_ID="$(echo ${ID_LIKE,,} | sed s/\"//g | cut -d' ' -f1)"
-    fi
-
-elif type lsb_release >/dev/null 2>&1; then
-    # linuxbase.org
-    OS=$(lsb_release -si)
-    VER=$(lsb_release -sr)
-elif [ -f /etc/lsb-release ]; then
-    # For some versions of Debian/Ubuntu without lsb_release command
-    . /etc/lsb-release
-    OS=$DISTRIB_ID
-    VER=$DISTRIB_RELEASE
-elif [ -f /etc/debian_version ]; then
-    # Older Debian, Ubuntu, etc.
-    OS=Debian
-    VER=$(cat /etc/debian_version)
-elif [ -f /etc/SuSE-release ]; then
-    # Older SuSE, etc.
-    OS=SuSE
-    VER=$(cat /etc/SuSE-release)
-elif [ -f /etc/redhat-release ]; then
-    # Older Red Hat, CentOS, etc.
-    OS=RedHat
-    VER=$(cat /etc/redhat-release)
-else
-    # Fall back to uname, e.g. "Linux <version>", also works for BSD, etc.
-    OS=$(uname -s)
-    VER=$(uname -r)
-fi
-
-
-# Output debugging info if $DEBUG set
-if [ "$DEBUG" = "true" ]; then
-    echo "OS: $OS"
-    echo "VER: $VER"
-    echo "UPSTREAM_ID: $UPSTREAM_ID"
-    exit 0
-fi
-
-# Setup prereqs for server
-# Common named prereqs
 PREREQ="curl wget unzip tar"
-PREREQDEB="dnsutils ufw"
-PREREQRPM="bind-utils"
-PREREQARCH="bind"
+PREREQDEB="dnsutils"
 
-echo "Installing prerequisites"
-if [ "${ID}" = "debian" ] || [ "$OS" = "Ubuntu" ] || [ "$OS" = "Debian" ] || [ "${UPSTREAM_ID}" = "ubuntu" ] || [ "${UPSTREAM_ID}" = "debian" ]; then
-    sudo apt-get update
-    sudo apt-get install -y ${PREREQ} ${PREREQDEB} # git
-elif [ "$OS" = "CentOS" ] || [ "$OS" = "RedHat" ] || [ "${UPSTREAM_ID}" = "rhel" ] || [ "${OS}" = "Almalinux" ] || [ "${UPSTREAM_ID}" = "Rocky*" ] ; then
-# openSUSE 15.4 fails to run the relay service and hangs waiting for it
-# Needs more work before it can be enabled
-# || [ "${UPSTREAM_ID}" = "suse" ]
-    sudo yum update -y
-    sudo yum install -y ${PREREQ} ${PREREQRPM} # git
-elif [ "${ID}" = "arch" ] || [ "${UPSTREAM_ID}" = "arch" ]; then
-    sudo pacman -Syu
-    sudo pacman -S ${PREREQ} ${PREREQARCH}
-else
-    echo "Unsupported OS"
-    # Here you could ask the user for permission to try and install anyway
-    # If they say yes, then do the install
-    # If they say no, exit the script
-    exit 1
-fi
-
-# Setting up firewall
-sudo ufw allow 21115:21119/tcp
-sudo ufw allow 22/tcp
-sudo ufw allow 21116/udp
-sudo ufw enable
+sudo apt-get install -y ${PREREQ} ${PREREQDEB}
 
 # Make folder /var/lib/rustdesk-server/
 if [ ! -d "/var/lib/rustdesk-server" ]; then
@@ -220,56 +138,13 @@ rm rustdesk-server-linux-arm64v8.zip
 rm -rf arm64v8
 fi
 
-# Choice for DNS or IP
-PS3='Choose your preferred option, IP or DNS/Domain:'
-WAN=("IP" "DNS/Domain")
-select WANOPT in "${WAN[@]}"; do
-case $WANOPT in
-"IP")
-wanip=$(dig @resolver4.opendns.com myip.opendns.com +short)
-sudo ufw allow 21114/tcp
-
-sudo ufw enable && ufw reload
-break
-;;
-
-"DNS/Domain")
-echo -ne "Enter your preferred domain/DNS address ${NC}: "
-read wanip
-# Check wanip is valid domain
-if ! [[ $wanip =~ ^[a-zA-Z0-9]+([a-zA-Z0-9.-]*[a-zA-Z0-9]+)?$ ]]; then
-    echo -e "${RED}Invalid domain/DNS address${NC}"
-    exit 1
-fi
-
-echo "Installing nginx"
-if [ "${ID}" = "debian" ] || [ "$OS" = "Ubuntu" ] || [ "$OS" = "Debian" ] || [ "${UPSTREAM_ID}" = "ubuntu" ] || [ "${UPSTREAM_ID}" = "debian" ]; then
-    sudo apt -y install nginx
-    sudo apt -y install python3-certbot-nginx
-elif [ "$OS" = "CentOS" ] || [ "$OS" = "RedHat" ] || [ "${UPSTREAM_ID}" = "rhel" ] || [ "${OS}" = "Almalinux" ] || [ "${UPSTREAM_ID}" = "Rocky*" ] ; then
-# openSUSE 15.4 fails to run the relay service and hangs waiting for it
-# Needs more work before it can be enabled
-# || [ "${UPSTREAM_ID}" = "suse" ]
-    sudo yum -y install nginx
-    sudo yum -y install python3-certbot-nginx
-elif [ "${ID}" = "arch" ] || [ "${UPSTREAM_ID}" = "arch" ]; then
-    sudo pacman -S install nginx
-    sudo pacman -S install python3-certbot-nginx
-else
-    echo "Unsupported OS"
-    # Here you could ask the user for permission to try and install anyway
-    # If they say yes, then do the install
-    # If they say no, exit the script
-    exit 1
-fi
-
 rustdesknginx="$(
   cat <<EOF
 server {
-  server_name ${wanip};
+  server_name {domain_name};
       location / {
-           proxy_set_header        X-Real-IP       $remote_addr;
-           proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header        X-Real-IP       \$remote_addr;
+           proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_pass http://127.0.0.1:21114/;
 }
 }
@@ -282,18 +157,5 @@ sudo rm /etc/nginx/sites-enabled/default
 
 sudo ln -s /etc/nginx/sites-available/rustdesk.conf /etc/nginx/sites-enabled/rustdesk.conf
 
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+sudo certbot --nginx --non-interactive --agree-tos --email your-email@example.com -d {domain_name}
 
-sudo ufw enable && ufw reload
-
-sudo certbot --nginx -d ${wanip}
-
-break
-;;
-*) echo "Invalid option $REPLY";;
-esac
-done
-
-echo -e "Your IP/DNS Address is ${wanip}"
-echo -e "Your public key is ${key}"
